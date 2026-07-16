@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lead Gen CRM — Team Pipeline</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --bg: #eef0f3;
+    --surface: #ffffff;
+    --surface-2: #f6f7f9;
+    --ink: #1c1e26;
+    --ink-soft: #5a5f6d;
+    --line: #dde0e6;
+    --amber-1: #d9edf9;   /* cold: new lead */
+    --amber-2: #a9d6e8;
+    --amber-3: #f2cf7e;
+    --amber-4: #e8a33d;
+    --amber-5: #c9711a;
+    --amber-6: #a6741e;   /* won: hot/solid */
+    --lost: #c2c6cf;
+    --danger: #c0392b;
+    --good: #1f7a4d;
+    --radius: 10px;
+    --font-display: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  @font-face{font-family:'Space Grotesk';src:local('Space Grotesk');}
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);}
+  body{min-height:100vh;}
+  a{color:inherit;}
+
+  /* ---------- Login ---------- */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:
+    linear-gradient(135deg, var(--amber-1), var(--bg) 55%);}
+  .login-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:40px 36px;width:380px;box-shadow:0 20px 60px rgba(28,30,38,0.08);}
+  .brand-mark{width:44px;height:44px;border-radius:50%;background:conic-gradient(from 220deg, var(--amber-1), var(--amber-3), var(--amber-5), var(--amber-6));margin-bottom:18px;}
+  .login-card h1{font-family:var(--font-display);font-size:22px;margin:0 0 4px;letter-spacing:-0.01em;}
+  .login-card p{color:var(--ink-soft);font-size:13.5px;margin:0 0 22px;line-height:1.5;}
+  .login-card input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:var(--font-body);margin-bottom:10px;background:var(--surface-2);}
+  .login-card input:focus{outline:2px solid var(--amber-4);outline-offset:1px;}
+  .btn{cursor:pointer;border:none;border-radius:8px;padding:11px 16px;font-size:14px;font-weight:600;font-family:var(--font-body);transition:transform .08s ease, opacity .15s ease;}
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{background:var(--ink);color:#fff;width:100%;}
+  .btn-primary:hover{opacity:.88;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+  .login-msg{font-size:12.5px;margin-top:12px;color:var(--good);min-height:16px;}
+  .login-msg.err{color:var(--danger);}
+
+  /* ---------- App shell ---------- */
+  #app{display:none;min-height:100vh;grid-template-rows:auto auto 1fr;}
+  header.topbar{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;align-items:center;gap:16px;}
+  .logo-row{display:flex;align-items:center;gap:10px;}
+  .brand-dot{width:26px;height:26px;border-radius:50%;background:conic-gradient(from 220deg, var(--amber-1), var(--amber-3), var(--amber-5), var(--amber-6));flex-shrink:0;}
+  header.topbar h1{font-family:var(--font-display);font-size:17px;margin:0;letter-spacing:-.01em;}
+  .topbar-sub{font-size:12px;color:var(--ink-soft);}
+  .topbar-spacer{flex:1;}
+  .who{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;gap:8px;}
+  .avatar{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--font-mono);}
+
+  /* KPI gauge strip */
+  .kpi-strip{display:flex;gap:1px;background:var(--line);border-bottom:1px solid var(--line);overflow-x:auto;}
+  .kpi{flex:1;min-width:150px;background:var(--surface);padding:14px 20px;}
+  .kpi .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);font-weight:600;}
+  .kpi .value{font-family:var(--font-mono);font-size:22px;font-weight:600;margin-top:4px;letter-spacing:-0.02em;}
+  .kpi .value.warn{color:var(--danger);}
+  .kpi .value.good{color:var(--good);}
+
+  /* Controls row */
+  .controls{display:flex;align-items:center;gap:10px;padding:14px 24px;flex-wrap:wrap;}
+  .seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:2px;}
+  .seg button{border:none;background:transparent;padding:6px 14px;font-size:13px;font-weight:600;border-radius:6px;cursor:pointer;color:var(--ink-soft);font-family:var(--font-body);}
+  .seg button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08);}
+  select, .search-input{padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--surface);font-family:var(--font-body);}
+  .search-input{min-width:200px;}
+  .controls .spacer{flex:1;}
+
+  main{padding:0 24px 40px;}
+
+  /* ---------- Kanban ---------- */
+  .board{display:flex;gap:14px;overflow-x:auto;padding-bottom:20px;align-items:flex-start;}
+  .col{min-width:250px;max-width:250px;background:var(--surface-2);border-radius:12px;border:1px solid var(--line);flex-shrink:0;}
+  .col-head{padding:12px 14px 10px;border-bottom:2px solid var(--stage-color, var(--line));}
+  .col-head .title{font-weight:700;font-size:13px;}
+  .col-head .meta{font-size:11px;color:var(--ink-soft);font-family:var(--font-mono);margin-top:2px;}
+  .col-body{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:60px;}
+  .card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--stage-color, var(--line));border-radius:8px;padding:10px 12px;cursor:pointer;transition:box-shadow .12s ease, transform .12s ease;}
+  .card:hover{box-shadow:0 4px 14px rgba(28,30,38,.08);transform:translateY(-1px);}
+  .card .co{font-weight:700;font-size:13px;margin-bottom:4px;}
+  .card .row{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink-soft);margin-top:6px;}
+  .tier-badge{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;}
+  .tier-A{background:#fde3cf;color:#8a4b12;}
+  .tier-B{background:#e4ecf7;color:#294a76;}
+  .tier-C{background:#eceef1;color:#5a5f6d;}
+  .stale-flag{color:var(--danger);font-weight:700;font-size:10px;}
+  .val{font-family:var(--font-mono);font-weight:600;}
+
+  /* ---------- Table ---------- */
+  table{width:100%;border-collapse:collapse;background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--line);}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);background:var(--surface-2);padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle;}
+  tbody tr{cursor:pointer;}
+  tbody tr:hover{background:var(--surface-2);}
+  tbody tr:last-child td{border-bottom:none;}
+  .stage-pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--stage-color-soft, var(--surface-2));white-space:nowrap;}
+
+  /* ---------- Modal ---------- */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(20,20,25,.45);align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--surface);border-radius:14px;max-width:640px;width:100%;max-height:88vh;overflow-y:auto;padding:26px;}
+  .modal h2{font-family:var(--font-display);font-size:19px;margin:0 0 18px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11.5px;font-weight:600;color:var(--ink-soft);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;}
+  .field input, .field select, .field textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;font-family:var(--font-body);background:var(--surface-2);}
+  .field textarea{resize:vertical;min-height:60px;}
+  .divider{border:none;border-top:1px solid var(--line);margin:18px 0;}
+  .log-list{max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+  .log-item{font-size:12.5px;background:var(--surface-2);border-radius:7px;padding:8px 10px;}
+  .log-item .meta{color:var(--ink-soft);font-size:10.5px;font-family:var(--font-mono);margin-bottom:2px;}
+  .log-row{display:flex;gap:8px;}
+  .log-row select{flex-shrink:0;width:110px;}
+  .log-row input{flex:1;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font-size:13px;}
+  .modal-actions{display:flex;justify-content:space-between;align-items:center;margin-top:20px;}
+  .modal-actions .right{display:flex;gap:8px;}
+  .btn-danger{background:transparent;color:var(--danger);border:1px solid #f0c8c2;}
+  .btn-sm{padding:8px 12px;font-size:12.5px;}
+
+  .fab{position:fixed;bottom:26px;right:26px;background:var(--ink);color:#fff;border:none;border-radius:30px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.2);font-family:var(--font-body);}
+
+  .toast{position:fixed;bottom:26px;left:26px;background:var(--ink);color:#fff;padding:9px 16px;border-radius:8px;font-size:12.5px;opacity:0;transform:translateY(8px);transition:all .25s ease;pointer-events:none;font-family:var(--font-mono);}
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .empty{padding:60px 20px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+
+  ::-webkit-scrollbar{height:8px;width:8px;}
+  ::-webkit-scrollbar-thumb{background:#c7cbd3;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="brand-mark"></div>
+    <h1>Lead Gen CRM</h1>
+    <p id="loginStep1Text">Shared pipeline for the sales team. Enter your work email — we'll send you a one-time code.</p>
+    <div id="loginStep1">
+      <input type="email" id="loginEmail" placeholder="you@company.com" autocomplete="email">
+      <button class="btn btn-primary" id="loginBtn">Send code</button>
+    </div>
+    <div id="loginStep2" style="display:none;">
+      <input type="text" id="loginCode" placeholder="Verification code" inputmode="numeric" maxlength="12" autocomplete="one-time-code">
+      <button class="btn btn-primary" id="verifyBtn">Verify &amp; sign in</button>
+      <button class="btn btn-ghost" id="resendBtn" style="width:100%;margin-top:8px;">Use a different email</button>
+    </div>
+    <div class="login-msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <header class="topbar">
+    <div class="logo-row">
+      <div class="brand-dot"></div>
+      <div>
+        <h1>Lead Gen CRM</h1>
+        <div class="topbar-sub">Shared team pipeline</div>
+      </div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="who">
+      <span id="whoEmail"></span>
+      <div class="avatar" id="whoAvatar">?</div>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Sign out</button>
+    </div>
+  </header>
+
+  <div class="kpi-strip" id="kpiStrip"></div>
+
+  <div class="controls">
+    <div class="seg" id="viewSeg">
+      <button data-view="board" class="active">Board</button>
+      <button data-view="table">Table</button>
+    </div>
+    <select id="fTier">
+      <option value="">All tiers</option>
+      <option value="A">Tier A</option>
+      <option value="B">Tier B</option>
+      <option value="C">Tier C</option>
+    </select>
+    <select id="fCategory">
+      <option value="">All categories</option>
+    </select>
+    <select id="fOwner">
+      <option value="">All owners</option>
+    </select>
+    <input type="text" class="search-input" id="fSearch" placeholder="Search company, contact, notes…">
+    <div class="spacer"></div>
+    <button class="btn btn-ghost btn-sm" id="exportBtn">Export CSV</button>
+    <button class="btn btn-ghost btn-sm" id="teamBtn">Team</button>
+  </div>
+
+  <main>
+    <div id="boardView" class="board"></div>
+    <div id="tableView" style="display:none;overflow-x:auto;">
+      <table>
+        <thead><tr>
+          <th>Company</th><th>Tier</th><th>Category</th><th>Stage</th><th>Owner</th>
+          <th>Weighted $</th><th>Last activity</th><th></th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <button class="fab" id="addLeadFab">+ New lead</button>
+</div>
+
+<!-- ============ Lead modal ============ -->
+<div class="overlay" id="leadOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">New lead</h2>
+    <div class="grid2">
+      <div class="field"><label>Company</label><input id="mCompany"></div>
+      <div class="field"><label>Category</label>
+        <select id="mCategory">
+          <option>Category A</option>
+          <option>Category B</option>
+          <option>Category C</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>City</label><input id="mCity"></div>
+      <div class="field"><label>State</label><input id="mState"></div>
+      <div class="field"><label>Contact name</label><input id="mContact"></div>
+      <div class="field"><label>Phone</label><input id="mPhone"></div>
+      <div class="field"><label>Email</label><input id="mEmail"></div>
+      <div class="field"><label>Tier</label>
+        <select id="mTier"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>
+      </div>
+      <div class="field"><label>Stage</label><select id="mStage"></select></div>
+      <div class="field"><label>Owner</label><select id="mOwner"></select></div>
+      <div class="field"><label>Est. monthly leads</label><input type="number" id="mVolume"></div>
+      <div class="field"><label>Est. deal value (USD)</label><input type="number" id="mValue"></div>
+    </div>
+    <div class="field"><label>Notes / pitch angle</label><textarea id="mNotes"></textarea></div>
+    <hr class="divider">
+    <div class="field"><label>Activity log</label></div>
+    <div class="log-list" id="mLog"></div>
+    <div class="log-row">
+      <select id="mActType"><option value="call">Call</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="meeting">Meeting</option><option value="note">Note</option></select>
+      <input type="text" id="mActNote" placeholder="What happened…">
+      <button class="btn btn-primary btn-sm" id="mActAdd">Log</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm" id="mDelete">Delete lead</button>
+      <div class="right">
+        <button class="btn btn-ghost btn-sm" id="mCancel">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="mSave">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Team modal ============ -->
+<div class="overlay" id="teamOverlay">
+  <div class="modal" style="max-width:420px;">
+    <h2>Team</h2>
+    <div id="teamList" style="margin-bottom:14px;display:flex;flex-direction:column;gap:6px;"></div>
+    <div class="field"><label>Add teammate</label>
+      <div style="display:flex;gap:8px;">
+        <input id="newRepName" placeholder="Name" style="flex:1;">
+        <input id="newRepEmail" placeholder="Email" style="flex:1;">
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <div class="right">
+        <button class="btn btn-ghost btn-sm" id="teamCancel">Close</button>
+        <button class="btn btn-primary btn-sm" id="teamAdd">Add</button>
+      </div>
+    </div>
+    <hr class="divider">
+    <h2 style="font-size:15px;">Access allowlist</h2>
+    <p style="font-size:12px;color:var(--ink-soft);margin-top:-8px;margin-bottom:12px;">Only these emails can sign in. Removing an email doesn't delete their account, but blocks any new sign-in from it.</p>
+    <div id="allowlistList" style="margin-bottom:14px;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;"></div>
+    <div class="field"><label>Add email to allowlist</label>
+      <div style="display:flex;gap:8px;">
+        <input id="newAllowEmail" placeholder="name@company.com" style="flex:1;">
+        <button class="btn btn-primary btn-sm" id="allowAdd">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Saved</div>
+
+<script>
+const SUPABASE_URL = 'https://mremxexoltefqoyapnnc.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_yqwSAUdDZu75T9E8PyshCQ_y2DWF8_o';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const CATEGORIES = ['Category A','Category B','Category C','Other'];
+const STAGE_COLORS = {
+  1:'--amber-1', 2:'--amber-2', 3:'--amber-3', 4:'--amber-4', 5:'--amber-5', 6:'#7fbf7f', 7:'var(--good)', 8:'var(--lost)'
+};
+
+let state = {
+  session: null,
+  reps: [],
+  stages: [],
+  leads: [],      // from leadgen_pipeline_view (denormalized, read)
+  rawLeads: {},   // id -> raw lead row for editing
+  activities: {}, // leadId -> [activities]
+  allowlist: [],
+  view: 'board',
+  currentLeadId: null,
+};
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+function esc(s){ return String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function money(n){ return n==null ? '—' : '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0}); }
+function initials(name){ if(!name) return '?'; return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+function daysAgo(iso){ if(!iso) return null; return Math.floor((Date.now()-new Date(iso).getTime())/86400000); }
+
+/* ---------------- AUTH ---------------- */
+let pendingEmail = null;
+
+document.getElementById('loginBtn').addEventListener('click', async ()=>{
+  const email = document.getElementById('loginEmail').value.trim();
+  const msg = document.getElementById('loginMsg');
+  msg.classList.remove('err');
+  if(!email){ msg.textContent='Enter your email.'; msg.classList.add('err'); return; }
+  msg.textContent = 'Sending code…';
+  // No emailRedirectTo needed — we verify the code directly, no redirect involved
+  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if(error){ msg.textContent = error.message; msg.classList.add('err'); return; }
+  pendingEmail = email;
+  msg.textContent = 'Code sent — check your inbox.';
+  document.getElementById('loginStep1').style.display = 'none';
+  document.getElementById('loginStep2').style.display = 'block';
+  document.getElementById('loginStep1Text').textContent = `Enter the code sent to ${email}.`;
+});
+
+document.getElementById('verifyBtn').addEventListener('click', async ()=>{
+  const code = document.getElementById('loginCode').value.trim();
+  const msg = document.getElementById('loginMsg');
+  msg.classList.remove('err');
+  if(!code){ msg.textContent='Enter the code from your email.'; msg.classList.add('err'); return; }
+  msg.textContent = 'Verifying…';
+  const { error } = await sb.auth.verifyOtp({ email: pendingEmail, token: code, type: 'email' });
+  if(error){ msg.textContent = error.message; msg.classList.add('err'); }
+  // onAuthStateChange picks up the session and shows the app on success
+});
+
+document.getElementById('resendBtn').addEventListener('click', ()=>{
+  pendingEmail = null;
+  document.getElementById('loginCode').value = '';
+  document.getElementById('loginStep2').style.display = 'none';
+  document.getElementById('loginStep1').style.display = 'block';
+  document.getElementById('loginStep1Text').textContent = "Shared pipeline for the sales team. Enter your work email — we'll send you a one-time 6-digit code.";
+  document.getElementById('loginMsg').textContent = '';
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  window.location.reload();
+});
+
+sb.auth.onAuthStateChange((event, session)=>{
+  if(session){
+    state.session = session;
+    // Clean up any leftover URL params from older links
+    if(window.location.hash || window.location.search){
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    showApp();
+  }
+});
+
+async function showApp(){
+  const email = state.session.user.email;
+  const { data: allowRow } = await sb.from('leadgen_allowed_emails').select('email').ilike('email', email).maybeSingle();
+  if(!allowRow){
+    await sb.auth.signOut();
+    document.getElementById('loginStep1').style.display = 'block';
+    document.getElementById('loginStep2').style.display = 'none';
+    document.getElementById('loginStep1Text').textContent = "Shared pipeline for the sales team. Enter your work email — we'll send you a one-time code.";
+    const msg = document.getElementById('loginMsg');
+    msg.textContent = `${email} is not on the access list for this CRM. Ask an admin to add you.`;
+    msg.classList.add('err');
+    return;
+  }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'grid';
+  document.getElementById('whoEmail').textContent = email;
+  document.getElementById('whoAvatar').textContent = initials(email.split('@')[0].replace('.',' '));
+  await ensureRep();
+  await loadAll();
+  wireRealtime();
+}
+
+async function ensureRep(){
+  const email = state.session.user.email;
+  const { data } = await sb.from('leadgen_reps').select('*').eq('email', email).maybeSingle();
+  if(!data){
+    await sb.from('leadgen_reps').insert({ name: email.split('@')[0], email });
+  }
+}
+
+/* ---------------- DATA LOADING ---------------- */
+async function loadAll(){
+  const [{data:reps}, {data:stages}, {data:leads}] = await Promise.all([
+    sb.from('leadgen_reps').select('*').order('name'),
+    sb.from('leadgen_stages').select('*').order('sort_order'),
+    sb.from('leadgen_pipeline_view').select('*'),
+  ]);
+  state.reps = reps||[];
+  state.stages = stages||[];
+  state.leads = leads||[];
+
+  const {data:rawLeadsArr} = await sb.from('leadgen_leads').select('*');
+  state.rawLeads = {};
+  (rawLeadsArr||[]).forEach(l=>state.rawLeads[l.id]=l);
+
+  const {data:acts} = await sb.from('leadgen_activities').select('*').order('created_at',{ascending:false});
+  state.activities = {};
+  (acts||[]).forEach(a=>{
+    if(!state.activities[a.lead_id]) state.activities[a.lead_id]=[];
+    state.activities[a.lead_id].push(a);
+  });
+
+  const {data:allow} = await sb.from('leadgen_allowed_emails').select('*').order('added_at');
+  state.allowlist = allow||[];
+
+  populateFilters();
+  renderAll();
+}
+
+function wireRealtime(){
+  sb.channel('leadgen-crm-live')
+    .on('postgres_changes', {event:'*', schema:'public', table:'leadgen_leads'}, ()=>loadAll())
+    .on('postgres_changes', {event:'*', schema:'public', table:'leadgen_activities'}, ()=>loadAll())
+    .on('postgres_changes', {event:'*', schema:'public', table:'leadgen_reps'}, ()=>loadAll())
+    .subscribe();
+}
+
+function populateFilters(){
+  const fCategory = document.getElementById('fCategory');
+  if(fCategory.options.length<=1){
+    CATEGORIES.forEach(c=>{ const o=document.createElement('option'); o.textContent=c; fCategory.appendChild(o); });
+  }
+  const fOwner = document.getElementById('fOwner');
+  fOwner.innerHTML = '<option value="">All owners</option>' + state.reps.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+}
+
+/* ---------------- FILTER + RENDER ---------------- */
+function filteredLeads(){
+  const tier = document.getElementById('fTier').value;
+  const category = document.getElementById('fCategory').value;
+  const owner = document.getElementById('fOwner').value;
+  const q = document.getElementById('fSearch').value.trim().toLowerCase();
+  return state.leads.filter(l=>{
+    if(tier && l.tier!==tier) return false;
+    if(category && l.category!==category) return false;
+    if(owner && (state.rawLeads[l.id]||{}).owner_id !== owner) return false;
+    if(q){
+      const hay = [l.company_name,l.contact_name,l.contact_email,l.notes].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderAll(){
+  renderKpis();
+  renderBoard();
+  renderTable();
+}
+
+function renderKpis(){
+  const leads = state.leads;
+  const openLeads = leads.filter(l=>l.stage_name!=='Won' && l.stage_name!=='Lost');
+  const totalOpenVal = openLeads.reduce((s,l)=>s+(Number(l.estimated_deal_value_usd)||0),0);
+  const weighted = openLeads.reduce((s,l)=>s+(Number(l.weighted_value_usd)||0),0);
+  const wonVal = leads.filter(l=>l.stage_name==='Won').reduce((s,l)=>s+(Number(l.estimated_deal_value_usd)||0),0);
+  const staleCount = openLeads.filter(l=>l.is_stale).length;
+  const tierA = leads.filter(l=>l.tier==='A' && l.stage_name!=='Won' && l.stage_name!=='Lost').length;
+
+  const kpis = [
+    {label:'Open pipeline', value: money(totalOpenVal)},
+    {label:'Weighted forecast', value: money(weighted), cls:'good'},
+    {label:'Won (total)', value: money(wonVal), cls:'good'},
+    {label:'Open Tier A', value: tierA},
+    {label:'Stale leads (14d+)', value: staleCount, cls: staleCount>0?'warn':''},
+    {label:'Total leads', value: leads.length},
+  ];
+  document.getElementById('kpiStrip').innerHTML = kpis.map(k=>`
+    <div class="kpi"><div class="label">${k.label}</div><div class="value ${k.cls||''}">${k.value}</div></div>
+  `).join('');
+}
+
+function renderBoard(){
+  const leads = filteredLeads();
+  const board = document.getElementById('boardView');
+  board.innerHTML = state.stages.map(st=>{
+    const inStage = leads.filter(l=>l.stage_name===st.name);
+    const val = inStage.reduce((s,l)=>s+(Number(l.weighted_value_usd)||0),0);
+    const color = STAGE_COLORS[st.id]?.startsWith('--') ? `var(${STAGE_COLORS[st.id]})` : STAGE_COLORS[st.id];
+    return `<div class="col">
+      <div class="col-head" style="--stage-color:${color}">
+        <div class="title">${esc(st.name)}</div>
+        <div class="meta">${inStage.length} · ${money(val)}</div>
+      </div>
+      <div class="col-body">
+        ${inStage.map(l=>cardHtml(l, color)).join('') || ''}
+      </div>
+    </div>`;
+  }).join('');
+  board.querySelectorAll('[data-lead-id]').forEach(el=>{
+    el.addEventListener('click', ()=>openModal(el.dataset.leadId));
+  });
+}
+
+function cardHtml(l, color){
+  const da = daysAgo(l.last_activity_at || l.created_at);
+  return `<div class="card" data-lead-id="${l.id}" style="--stage-color:${color}">
+    <div class="co">${esc(l.company_name)}</div>
+    <div class="row">
+      <span class="tier-badge tier-${l.tier}">${l.tier}</span>
+      <span class="val">${money(l.weighted_value_usd)}</span>
+    </div>
+    <div class="row">
+      <span>${l.owner_name ? esc(l.owner_name) : 'Unassigned'}</span>
+      <span class="${l.is_stale?'stale-flag':''}">${l.is_stale ? '⚠ stale' : (da!=null ? da+'d ago' : '')}</span>
+    </div>
+  </div>`;
+}
+
+function renderTable(){
+  const leads = filteredLeads();
+  const tbody = document.getElementById('tableBody');
+  if(leads.length===0){
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">No leads match these filters.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = leads.map(l=>{
+    const da = daysAgo(l.last_activity_at || l.created_at);
+    return `<tr data-lead-id="${l.id}">
+      <td><strong>${esc(l.company_name)}</strong><div style="color:var(--ink-soft);font-size:11.5px;">${esc(l.category||'')}</div></td>
+      <td><span class="tier-badge tier-${l.tier}">${l.tier}</span></td>
+      <td>${esc(l.category||'—')}</td>
+      <td><span class="stage-pill">${esc(l.stage_name)}</span></td>
+      <td>${l.owner_name ? esc(l.owner_name) : '<span style="color:var(--ink-soft)">Unassigned</span>'}</td>
+      <td class="val">${money(l.weighted_value_usd)}</td>
+      <td>${l.is_stale ? '<span class="stale-flag">⚠ stale</span>' : (da!=null ? da+'d ago' : '—')}</td>
+      <td>›</td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('tr[data-lead-id]').forEach(el=>{
+    el.addEventListener('click', ()=>openModal(el.dataset.leadId));
+  });
+}
+
+/* ---------------- VIEW SWITCH / FILTERS ---------------- */
+document.getElementById('viewSeg').addEventListener('click', e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  state.view = btn.dataset.view;
+  document.getElementById('boardView').style.display = state.view==='board' ? 'flex' : 'none';
+  document.getElementById('tableView').style.display = state.view==='table' ? 'block' : 'none';
+});
+['fTier','fCategory','fOwner','fSearch'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', renderAll);
+});
+
+/* ---------------- MODAL: LEAD ---------------- */
+function populateStageSelect(){
+  document.getElementById('mStage').innerHTML = state.stages.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+}
+function populateOwnerSelect(){
+  document.getElementById('mOwner').innerHTML = '<option value="">Unassigned</option>' + state.reps.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+}
+
+function openModal(leadId){
+  state.currentLeadId = leadId || null;
+  populateStageSelect();
+  populateOwnerSelect();
+  document.getElementById('modalTitle').textContent = leadId ? 'Edit lead' : 'New lead';
+  document.getElementById('mDelete').style.display = leadId ? 'inline-block' : 'none';
+
+  const l = leadId ? state.rawLeads[leadId] : {};
+  document.getElementById('mCompany').value = l.company_name || '';
+  document.getElementById('mCategory').value = l.category || CATEGORIES[0];
+  document.getElementById('mCity').value = l.city || '';
+  document.getElementById('mState').value = l.state || '';
+  document.getElementById('mContact').value = l.contact_name || '';
+  document.getElementById('mPhone').value = l.contact_phone || '';
+  document.getElementById('mEmail').value = l.contact_email || '';
+  document.getElementById('mTier').value = l.tier || 'C';
+  document.getElementById('mStage').value = l.stage_id || state.stages[0]?.id;
+  document.getElementById('mOwner').value = l.owner_id || '';
+  document.getElementById('mVolume').value = l.estimated_monthly_leads || '';
+  document.getElementById('mValue').value = l.estimated_deal_value_usd || '';
+  document.getElementById('mNotes').value = l.notes || '';
+
+  renderLog();
+  document.getElementById('leadOverlay').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('leadOverlay').classList.remove('show');
+  state.currentLeadId = null;
+}
+function renderLog(){
+  const list = document.getElementById('mLog');
+  const acts = state.currentLeadId ? (state.activities[state.currentLeadId]||[]) : [];
+  if(acts.length===0){ list.innerHTML = '<div style="font-size:12px;color:var(--ink-soft);">No activity logged yet.</div>'; return; }
+  list.innerHTML = acts.map(a=>{
+    const rep = state.reps.find(r=>r.id===a.rep_id);
+    return `<div class="log-item"><div class="meta">${a.activity_type.toUpperCase()} · ${new Date(a.created_at).toLocaleString()} ${rep?'· '+esc(rep.name):''}</div>${esc(a.content||'')}</div>`;
+  }).join('');
+}
+
+document.getElementById('addLeadFab').addEventListener('click', ()=>openModal(null));
+document.getElementById('mCancel').addEventListener('click', closeModal);
+document.getElementById('leadOverlay').addEventListener('click', e=>{ if(e.target.id==='leadOverlay') closeModal(); });
+
+document.getElementById('mSave').addEventListener('click', async ()=>{
+  const payload = {
+    company_name: document.getElementById('mCompany').value.trim(),
+    category: document.getElementById('mCategory').value,
+    city: document.getElementById('mCity').value.trim() || null,
+    state: document.getElementById('mState').value.trim() || null,
+    contact_name: document.getElementById('mContact').value.trim() || null,
+    contact_phone: document.getElementById('mPhone').value.trim() || null,
+    contact_email: document.getElementById('mEmail').value.trim() || null,
+    tier: document.getElementById('mTier').value,
+    stage_id: Number(document.getElementById('mStage').value),
+    owner_id: document.getElementById('mOwner').value || null,
+    estimated_monthly_leads: document.getElementById('mVolume').value || null,
+    estimated_deal_value_usd: document.getElementById('mValue').value || null,
+    notes: document.getElementById('mNotes').value.trim() || null,
+  };
+  if(!payload.company_name){ toast('Company name is required'); return; }
+
+  if(state.currentLeadId){
+    const before = state.rawLeads[state.currentLeadId];
+    await sb.from('leadgen_leads').update(payload).eq('id', state.currentLeadId);
+    if(before && before.stage_id !== payload.stage_id){
+      await logActivity(state.currentLeadId, 'stage_change', `Stage changed to ${state.stages.find(s=>s.id===payload.stage_id)?.name}`);
+    }
+  } else {
+    payload.source = 'Manual entry';
+    const {data} = await sb.from('leadgen_leads').insert(payload).select().single();
+    if(data){ await logActivity(data.id, 'note', 'Lead created'); }
+  }
+  toast('Saved');
+  closeModal();
+  await loadAll();
+});
+
+document.getElementById('mDelete').addEventListener('click', async ()=>{
+  if(!state.currentLeadId) return;
+  if(!confirm('Delete this lead and its activity history? This cannot be undone.')) return;
+  await sb.from('leadgen_leads').delete().eq('id', state.currentLeadId);
+  toast('Lead deleted');
+  closeModal();
+  await loadAll();
+});
+
+async function logActivity(leadId, type, content){
+  const email = state.session.user.email;
+  const rep = state.reps.find(r=>r.email===email);
+  await sb.from('leadgen_activities').insert({ lead_id: leadId, rep_id: rep?rep.id:null, activity_type: type, content });
+}
+
+document.getElementById('mActAdd').addEventListener('click', async ()=>{
+  if(!state.currentLeadId){ toast('Save the lead first, then log activity.'); return; }
+  const type = document.getElementById('mActType').value;
+  const note = document.getElementById('mActNote').value.trim();
+  if(!note) return;
+  await logActivity(state.currentLeadId, type, note);
+  document.getElementById('mActNote').value = '';
+  await loadAll();
+  renderLog();
+  toast('Activity logged');
+});
+
+/* ---------------- TEAM MODAL ---------------- */
+function renderTeamList(){
+  document.getElementById('teamList').innerHTML = state.reps.map(r=>`
+    <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);">
+      <span>${esc(r.name)}</span><span style="color:var(--ink-soft);font-size:12px;">${esc(r.email||'')}</span>
+    </div>`).join('');
+}
+function renderAllowlist(){
+  document.getElementById('allowlistList').innerHTML = state.allowlist.map(a=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);">
+      <span>${esc(a.email)}</span>
+      <button class="btn btn-ghost btn-sm" style="padding:3px 9px;font-size:11px;color:var(--danger);" data-remove-email="${esc(a.email)}">Remove</button>
+    </div>`).join('') || '<div style="font-size:12px;color:var(--ink-soft);">No emails on the allowlist yet.</div>';
+  document.getElementById('allowlistList').querySelectorAll('[data-remove-email]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const email = btn.dataset.removeEmail;
+      if(email === state.session.user.email){
+        if(!confirm('This is your own email. Remove it anyway? You will be locked out of future sign-ins (existing session stays active until you sign out).')) return;
+      } else if(!confirm(`Remove ${email} from the allowlist?`)){ return; }
+      await sb.from('leadgen_allowed_emails').delete().eq('email', email);
+      await loadAll();
+      renderAllowlist();
+      toast('Removed from allowlist');
+    });
+  });
+}
+
+document.getElementById('teamBtn').addEventListener('click', ()=>{
+  renderTeamList();
+  renderAllowlist();
+  document.getElementById('teamOverlay').classList.add('show');
+});
+document.getElementById('teamCancel').addEventListener('click', ()=>document.getElementById('teamOverlay').classList.remove('show'));
+document.getElementById('teamOverlay').addEventListener('click', e=>{ if(e.target.id==='teamOverlay') e.currentTarget.classList.remove('show'); });
+document.getElementById('teamAdd').addEventListener('click', async ()=>{
+  const name = document.getElementById('newRepName').value.trim();
+  const email = document.getElementById('newRepEmail').value.trim();
+  if(!name || !email){ toast('Name and email required'); return; }
+  await sb.from('leadgen_reps').insert({name, email});
+  document.getElementById('newRepName').value='';
+  document.getElementById('newRepEmail').value='';
+  await loadAll();
+  renderTeamList();
+  toast('Teammate added');
+});
+document.getElementById('allowAdd').addEventListener('click', async ()=>{
+  const email = document.getElementById('newAllowEmail').value.trim().toLowerCase();
+  if(!email || !email.includes('@')){ toast('Enter a valid email'); return; }
+  const { error } = await sb.from('leadgen_allowed_emails').insert({ email });
+  if(error){ toast(error.message.includes('duplicate') ? 'Already on the allowlist' : 'Could not add'); return; }
+  document.getElementById('newAllowEmail').value = '';
+  await loadAll();
+  renderAllowlist();
+  toast('Added to allowlist');
+});
+
+/* ---------------- CSV EXPORT ---------------- */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const leads = filteredLeads();
+  const rows = [['Company','Tier','Category','City','State','Stage','Owner','Weighted USD','Est Value USD','Contact','Phone','Email','Notes','Last Activity']];
+  leads.forEach(l=>{
+    rows.push([l.company_name,l.tier,l.category,l.city,l.state,l.stage_name,l.owner_name,l.weighted_value_usd,l.estimated_deal_value_usd,l.contact_name,l.contact_phone,l.contact_email,l.notes,l.last_activity_at]);
+  });
+  const csv = rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'leadgen_pipeline.csv';
+  a.click();
+});
+
+/* ---------------- INIT: check existing session (e.g. after magic-link redirect) ---------------- */
+(async ()=>{
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){ state.session = session; showApp(); }
+})();
+</script>
+</body>
+</html>
