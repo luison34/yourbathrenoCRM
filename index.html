@@ -209,7 +209,7 @@
     <div id="tableView" style="display:none;overflow-x:auto;">
       <table>
         <thead><tr>
-          <th>Company</th><th>Tier</th><th>Category</th><th>Stage</th><th>Owner</th>
+          <th>Lead Name</th><th>Tier</th><th>Category</th><th>Stage</th><th>Owner</th>
           <th>Weighted $</th><th>Last activity</th><th></th>
         </tr></thead>
         <tbody id="tableBody"></tbody>
@@ -225,7 +225,7 @@
   <div class="modal">
     <h2 id="modalTitle">New lead</h2>
     <div class="grid2">
-      <div class="field"><label>Company</label><input id="mCompany"></div>
+      <div class="field"><label>Lead Name</label><input id="mCompany"></div>
       <div class="field"><label>Category</label>
         <select id="mCategory">
           <option>Full Remodel</option>
@@ -651,7 +651,7 @@ document.getElementById('mSave').addEventListener('click', async ()=>{
     estimated_deal_value_usd: document.getElementById('mValue').value || null,
     notes: document.getElementById('mNotes').value.trim() || null,
   };
-  if(!payload.company_name){ toast('Company name is required'); return; }
+  if(!payload.company_name){ toast('Lead name is required'); return; }
 
   if(state.currentLeadId){
     const before = state.rawLeads[state.currentLeadId];
@@ -755,7 +755,7 @@ document.getElementById('allowAdd').addEventListener('click', async ()=>{
 /* ---------------- CSV EXPORT ---------------- */
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   const leads = filteredLeads();
-  const rows = [['Company','Tier','Category','City','State','Stage','Owner','Weighted USD','Est Value USD','Contact','Phone','Email','Notes','Last Activity']];
+  const rows = [['Lead Name','Tier','Category','City','State','Stage','Owner','Weighted USD','Est Value USD','Contact','Phone','Email','Notes','Last Activity']];
   leads.forEach(l=>{
     rows.push([l.company_name,l.tier,l.category,l.city,l.state,l.stage_name,l.owner_name,l.weighted_value_usd,l.estimated_deal_value_usd,l.contact_name,l.contact_phone,l.contact_email,l.notes,l.last_activity_at]);
   });
