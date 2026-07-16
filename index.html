@@ -225,7 +225,7 @@
   <div class="modal">
     <h2 id="modalTitle">New lead</h2>
     <div class="grid2">
-      <div class="field"><label>Lead Name</label><input id="mCompany"></div>
+      <div class="field"><label>Lead Name</label><input id="mLeadName"></div>
       <div class="field"><label>Category</label>
         <select id="mCategory">
           <option>Full Remodel</option>
@@ -474,7 +474,7 @@ function filteredLeads(){
     if(category && l.category!==category) return false;
     if(owner && (state.rawLeads[l.id]||{}).owner_id !== owner) return false;
     if(q){
-      const hay = [l.company_name,l.contact_name,l.contact_email,l.notes].join(' ').toLowerCase();
+      const hay = [l.lead_name,l.contact_name,l.contact_email,l.notes].join(' ').toLowerCase();
       if(!hay.includes(q)) return false;
     }
     return true;
@@ -534,7 +534,7 @@ function renderBoard(){
 function cardHtml(l, color){
   const da = daysAgo(l.last_activity_at || l.created_at);
   return `<div class="card" data-lead-id="${l.id}" style="--stage-color:${color}">
-    <div class="co">${esc(l.company_name)}</div>
+    <div class="co">${esc(l.lead_name)}</div>
     <div class="row">
       <span class="tier-badge tier-${l.tier}">${l.tier}</span>
       <span class="val">${money(l.weighted_value_usd)}</span>
@@ -556,7 +556,7 @@ function renderTable(){
   tbody.innerHTML = leads.map(l=>{
     const da = daysAgo(l.last_activity_at || l.created_at);
     return `<tr data-lead-id="${l.id}">
-      <td><strong>${esc(l.company_name)}</strong><div style="color:var(--ink-soft);font-size:11.5px;">${esc(l.category||'')}</div></td>
+      <td><strong>${esc(l.lead_name)}</strong><div style="color:var(--ink-soft);font-size:11.5px;">${esc(l.category||'')}</div></td>
       <td><span class="tier-badge tier-${l.tier}">${l.tier}</span></td>
       <td>${esc(l.category||'—')}</td>
       <td><span class="stage-pill">${esc(l.stage_name)}</span></td>
@@ -600,7 +600,7 @@ function openModal(leadId){
   document.getElementById('mDelete').style.display = leadId ? 'inline-block' : 'none';
 
   const l = leadId ? state.rawLeads[leadId] : {};
-  document.getElementById('mCompany').value = l.company_name || '';
+  document.getElementById('mLeadName').value = l.lead_name || '';
   document.getElementById('mCategory').value = l.category || CATEGORIES[0];
   document.getElementById('mCity').value = l.city || '';
   document.getElementById('mState').value = l.state || '';
@@ -637,7 +637,7 @@ document.getElementById('leadOverlay').addEventListener('click', e=>{ if(e.targe
 
 document.getElementById('mSave').addEventListener('click', async ()=>{
   const payload = {
-    company_name: document.getElementById('mCompany').value.trim(),
+    lead_name: document.getElementById('mLeadName').value.trim(),
     category: document.getElementById('mCategory').value,
     city: document.getElementById('mCity').value.trim() || null,
     state: document.getElementById('mState').value.trim() || null,
@@ -651,7 +651,7 @@ document.getElementById('mSave').addEventListener('click', async ()=>{
     estimated_deal_value_usd: document.getElementById('mValue').value || null,
     notes: document.getElementById('mNotes').value.trim() || null,
   };
-  if(!payload.company_name){ toast('Lead name is required'); return; }
+  if(!payload.lead_name){ toast('Lead name is required'); return; }
 
   if(state.currentLeadId){
     const before = state.rawLeads[state.currentLeadId];
@@ -757,7 +757,7 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   const leads = filteredLeads();
   const rows = [['Lead Name','Tier','Category','City','State','Stage','Owner','Weighted USD','Est Value USD','Contact','Phone','Email','Notes','Last Activity']];
   leads.forEach(l=>{
-    rows.push([l.company_name,l.tier,l.category,l.city,l.state,l.stage_name,l.owner_name,l.weighted_value_usd,l.estimated_deal_value_usd,l.contact_name,l.contact_phone,l.contact_email,l.notes,l.last_activity_at]);
+    rows.push([l.lead_name,l.tier,l.category,l.city,l.state,l.stage_name,l.owner_name,l.weighted_value_usd,l.estimated_deal_value_usd,l.contact_name,l.contact_phone,l.contact_email,l.notes,l.last_activity_at]);
   });
   const csv = rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const a = document.createElement('a');
