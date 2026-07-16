@@ -228,9 +228,10 @@
       <div class="field"><label>Company</label><input id="mCompany"></div>
       <div class="field"><label>Category</label>
         <select id="mCategory">
-          <option>Category A</option>
-          <option>Category B</option>
-          <option>Category C</option>
+          <option>Full Remodel</option>
+          <option>Refresh</option>
+          <option>Tub to Shower</option>
+          <option>Accessibility</option>
           <option>Other</option>
         </select>
       </div>
@@ -303,7 +304,7 @@ const SUPABASE_URL = 'https://mremxexoltefqoyapnnc.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_yqwSAUdDZu75T9E8PyshCQ_y2DWF8_o';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const CATEGORIES = ['Category A','Category B','Category C','Other'];
+const CATEGORIES = ['Full Remodel','Refresh','Tub to Shower','Accessibility','Other'];
 const STAGE_COLORS = {
   1:'--amber-1', 2:'--amber-2', 3:'--amber-3', 4:'--amber-4', 5:'--amber-5', 6:'#7fbf7f', 7:'var(--good)', 8:'var(--lost)'
 };
